@@ -1,6 +1,10 @@
 (ns jacoobes.cljgguf
   (:require [gloss.io :as gio :refer [decode]])
-  (:require [gloss.core :as gcore :refer [compile-frame string enum defcodec]])
+  (:require [gloss.core :as gcore :refer [compile-frame 
+                                          string 
+                                          enum 
+                                          defcodec
+                                          header ]])
   (:require [clojure.java.io :as io]))
 
 (defn slurp-bytes
@@ -19,22 +23,49 @@
 (def gguf_string (compile-frame 
                    (string :ascii :length 65535 :delimiters [ \0 ])))
 
-(defcodec tmetadata (enum :int32 GGUF_METADATA_VALUE_TYPE_UINT8
-                                 GGUF_METADATA_VALUE_TYPE_INT8
-                                 GGUF_METADATA_VALUE_TYPE_UINT16
-                                 GGUF_METADATA_VALUE_TYPE_INT16
-                                 GGUF_METADATA_VALUE_TYPE_UINT32
-                                 GGUF_METADATA_VALUE_TYPE_INT32
-                                 GGUF_METADATA_VALUE_TYPE_FLOAT32
-                                 GGUF_METADATA_VALUE_TYPE_BOOL
-                                 GGUF_METADATA_VALUE_TYPE_STRING
-                                 GGUF_METADATA_VALUE_TYPE_ARRAY
-                                 GGUF_METADATA_VALUE_TYPE_UINT64
-                                 GGUF_METADATA_VALUE_TYPE_INT64
-                                 GGUF_METADATA_VALUE_TYPE_FLOAT64))
+(defcodec gguf_metadata_t (enum :int32 
+                                :GGUF_METADATA_VALUE_TYPE_UINT8
+                                :GGUF_METADATA_VALUE_TYPE_INT8
+                                :GGUF_METADATA_VALUE_TYPE_UINT16
+                                :GGUF_METADATA_VALUE_TYPE_INT16
+                                :GGUF_METADATA_VALUE_TYPE_UINT32
+                                :GGUF_METADATA_VALUE_TYPE_INT32
+                                :GGUF_METADATA_VALUE_TYPE_FLOAT32
+                                :GGUF_METADATA_VALUE_TYPE_BOOL
+                                :GGUF_METADATA_VALUE_TYPE_STRING
+                                :GGUF_METADATA_VALUE_TYPE_ARRAY
+                                :GGUF_METADATA_VALUE_TYPE_UINT64
+                                :GGUF_METADATA_VALUE_TYPE_INT64
+                                :GGUF_METADATA_VALUE_TYPE_FLOAT64))
+
+(defcodec GGUF_METADATA_VALUE_TYPE_UINT8 {:type :GGUF_METADATA_VALUE_TYPE_UINT8 })
+(defcodec GGUF_METADATA_VALUE_TYPE_INT8 {:type :GGUF_METADATA_VALUE_TYPE_INT8 })
+(defcodec GGUF_METADATA_VALUE_TYPE_UINT16 {:type :GGUF_METADATA_VALUE_TYPE_UINT16 })
+(defcodec GGUF_METADATA_VALUE_TYPE_INT16 {:type :GGUF_METADATA_VALUE_TYPE_INT16 })
+(defcodec GGUF_METADATA_VALUE_TYPE_UINT32 {:type :GGUF_METADATA_VALUE_TYPE_UINT32 })
+(defcodec GGUF_METADATA_VALUE_TYPE_INT32 {:type :GGUF_METADATA_VALUE_TYPE_INT32 })
+(defcodec GGUF_METADATA_VALUE_TYPE_FLOAT32 {:type :GGUF_METADATA_VALUE_TYPE_FLOAT32 })
+(defcodec GGUF_METADATA_VALUE_TYPE_BOOL {:type :GGUF_METADATA_VALUE_TYPE_BOOL })
+(defcodec GGUF_METADATA_VALUE_TYPE_STRING {:type :GGUF_METADATA_VALUE_TYPE_STRING })
+(defcodec GGUF_METADATA_VALUE_TYPE_ARRAY {:type :GGUF_METADATA_VALUE_TYPE_ARRAY })
+(defcodec GGUF_METADATA_VALUE_TYPE_UINT64 {:type :GGUF_METADATA_VALUE_TYPE_UINT64 })
+(defcodec GGUF_METADATA_VALUE_TYPE_INT64 {:type :GGUF_METADATA_VALUE_TYPE_INT64 })
+(defcodec GGUF_METADATA_VALUE_TYPE_FLOAT64 {:type :GGUF_METADATA_VALUE_TYPE_FLOAT64 })
 
 (defn metadata-frame [mct] 
-  
+  (header gguf_metadata_t {:GGUF_METADATA_VALUE_TYPE_UINT8 GGUF_METADATA_VALUE_TYPE_UINT8 
+                           :GGUF_METADATA_VALUE_TYPE_INT8 GGUF_METADATA_VALUE_TYPE_INT8 
+                           :GGUF_METADATA_VALUE_TYPE_UINT16 GGUF_METADATA_VALUE_TYPE_UINT16 
+                           :GGUF_METADATA_VALUE_TYPE_INT16 GGUF_METADATA_VALUE_TYPE_INT16 
+                           :GGUF_METADATA_VALUE_TYPE_UINT32 GGUF_METADATA_VALUE_TYPE_UINT32 
+                           :GGUF_METADATA_VALUE_TYPE_INT32 GGUF_METADATA_VALUE_TYPE_INT32 
+                           :GGUF_METADATA_VALUE_TYPE_FLOAT32 GGUF_METADATA_VALUE_TYPE_FLOAT32 
+                           :GGUF_METADATA_VALUE_TYPE_BOOL GGUF_METADATA_VALUE_TYPE_BOOL 
+                           :GGUF_METADATA_VALUE_TYPE_STRING GGUF_METADATA_VALUE_TYPE_STRING
+                           :GGUF_METADATA_VALUE_TYPE_ARRAY GGUF_METADATA_VALUE_TYPE_ARRAY 
+                           :GGUF_METADATA_VALUE_TYPE_UINT64 GGUF_METADATA_VALUE_TYPE_UINT64 
+                           :GGUF_METADATA_VALUE_TYPE_INT64 GGUF_METADATA_VALUE_TYPE_INT64 
+                           :GGUF_METADATA_VALUE_TYPE_FLOAT64 GGUF_METADATA_VALUE_TYPE_FLOAT64 } :type)
   )
 
 (defn tensor-frame [tct] tct)
