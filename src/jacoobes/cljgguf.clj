@@ -8,7 +8,7 @@
   [x]
   (with-open [out (java.io.ByteArrayOutputStream.)]
     (clojure.java.io/copy (clojure.java.io/input-stream x) out)
-    (java.nio.ByteBuffer/wrap (.toByteArray out))))
+    (gio/to-byte-buffer (.toByteArray out))))
 
 
 (def gguf-header (compile-frame (gcore/ordered-map  
@@ -16,10 +16,10 @@
                                   :version :int32-le
                                   :tensor_count :uint64-le 
                                   :metadata_kv_count :uint64-le)))
-
-(defn metadata-frame [ct] 
-  
-  )
+(defn metadata-tensor-frame [mct tct] 
+   [
+    
+    ])
 
 
 (defn parse [x]
@@ -27,8 +27,8 @@
         header (decode gguf-header buf false)]
     ; after reading headers, we should be at 24 bytes
     (do (.position buf 24)
-      
-      )))
+        (let [ ])
+        )))
 
 
 
