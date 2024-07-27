@@ -1,13 +1,8 @@
 (ns jacoobes.cljgguf
   (:require [gloss.io :as gio])
-  (:require [gloss.core :as gcore :refer [compile-frame 
-                                          string 
-                                          prefix
-                                          finite-frame
-                                          repeated
-                                          enum 
-                                          defcodec
-                                          header ]])
+  (:require [gloss.core :as gcore :refer [compile-frame string prefix
+                                          finite-frame repeated enum 
+                                          defcodec header ]])
   (:require [clojure.java.io :as io]))
 
 (defn slurp-bytes
@@ -18,11 +13,11 @@
     (gio/to-byte-buffer (.toByteArray out))))
 
 
-(defcodec gguf_string (finite-frame :uint64-le 
-                                    (string :ascii)))
+(declare gguf_metadata_value)
 
+(defcodec gguf_string (finite-frame :uint64-le (string :utf-8)))
 
-(defcodec gguf_metadata_t (enum :int32-le {:GGUF_METADATA_VALUE_TYPE_UINT8 0
+(defcodec gguf_metadata_t (enum :uint32-le {:GGUF_METADATA_VALUE_TYPE_UINT8 0
                                             :GGUF_METADATA_VALUE_TYPE_INT8 1
                                             :GGUF_METADATA_VALUE_TYPE_UINT16 2
                                             :GGUF_METADATA_VALUE_TYPE_INT16 3
@@ -46,44 +41,63 @@
 (defcodec GGUF_METADATA_VALUE_TYPE_FLOAT32 {:type :GGUF_METADATA_VALUE_TYPE_FLOAT32 :val :float32-le })
 (defcodec GGUF_METADATA_VALUE_TYPE_BOOL {:type :GGUF_METADATA_VALUE_TYPE_BOOL :val :byte })
 (defcodec GGUF_METADATA_VALUE_TYPE_STRING {:type :GGUF_METADATA_VALUE_TYPE_STRING :val gguf_string })
-(defcodec GGUF_METAD)ATA_VALUE_TYPE_UINT64 {:type :GGUF_METADATA_VALUE_TYPE_UINT64 :val :uint64-le })
+(defcodec GGUF_METADATA_VALUE_TYPE_UINT64 {:type :GGUF_METADATA_VALUE_TYPE_UINT64 :val :uint64-le })
 (defcodec GGUF_METADATA_VALUE_TYPE_INT64 {:type :GGUF_METADATA_VALUE_TYPE_INT64 :val :int64-le })
 (defcodec GGUF_METADATA_VALUE_TYPE_FLOAT64 {:type :GGUF_METADATA_VALUE_TYPE_FLOAT64 :val :float64-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_ARRAY {:type :GGUF_METADATA_VALUE_TYPE_ARRAY :val :byte })
+(defcodec GGUF_METADATA_VALUE_TYPE_ARRAY {:type :GGUF_METADATA_VALUE_TYPE_ARRAY 
+                                          :val (gcore/ordered-map :element-type gguf_metadata_t
+                                                                  :elements (repeated gguf_metadata_value :prefix :uint64-le)) })
 
-
+(defcodec gguf_metadata_value (header gguf_metadata_t { :GGUF_METADATA_VALUE_TYPE_UINT8 GGUF_METADATA_VALUE_TYPE_UINT8 
+                                                        :GGUF_METADATA_VALUE_TYPE_INT8 GGUF_METADATA_VALUE_TYPE_INT8 
+                                                        :GGUF_METADATA_VALUE_TYPE_UINT16 GGUF_METADATA_VALUE_TYPE_UINT16 
+                                                        :GGUF_METADATA_VALUE_TYPE_INT16 GGUF_METADATA_VALUE_TYPE_INT16 
+                                                        :GGUF_METADATA_VALUE_TYPE_UINT32 GGUF_METADATA_VALUE_TYPE_UINT32 
+                                                        :GGUF_METADATA_VALUE_TYPE_INT32 GGUF_METADATA_VALUE_TYPE_INT32 
+                                                        :GGUF_METADATA_VALUE_TYPE_FLOAT32 GGUF_METADATA_VALUE_TYPE_FLOAT32 
+                                                        :GGUF_METADATA_VALUE_TYPE_BOOL GGUF_METADATA_VALUE_TYPE_BOOL 
+                                                        :GGUF_METADATA_VALUE_TYPE_STRING GGUF_METADATA_VALUE_TYPE_STRING
+                                                        :GGUF_METADATA_VALUE_TYPE_ARRAY GGUF_METADATA_VALUE_TYPE_ARRAY 
+                                                        :GGUF_METADATA_VALUE_TYPE_UINT64 GGUF_METADATA_VALUE_TYPE_UINT64 
+                                                        :GGUF_METADATA_VALUE_TYPE_INT64 GGUF_METADATA_VALUE_TYPE_INT64 
+                                                        :GGUF_METADATA_VALUE_TYPE_FLOAT64 GGUF_METADATA_VALUE_TYPE_FLOAT64} :type))
 (defcodec metadata_pair 
   (gcore/ordered-map :key gguf_string  
-                     :value (header gguf_metadata_t {
-                             :GGUF_METADATA_VALUE_TYPE_UINT8 GGUF_METADATA_VALUE_TYPE_UINT8 
-                             :GGUF_METADATA_VALUE_TYPE_INT8 GGUF_METADATA_VALUE_TYPE_INT8 
-                             :GGUF_METADATA_VALUE_TYPE_UINT16 GGUF_METADATA_VALUE_TYPE_UINT16 
-                             :GGUF_METADATA_VALUE_TYPE_INT16 GGUF_METADATA_VALUE_TYPE_INT16 
-                             :GGUF_METADATA_VALUE_TYPE_UINT32 GGUF_METADATA_VALUE_TYPE_UINT32 
-                             :GGUF_METADATA_VALUE_TYPE_INT32 GGUF_METADATA_VALUE_TYPE_INT32 
-                             :GGUF_METADATA_VALUE_TYPE_FLOAT32 GGUF_METADATA_VALUE_TYPE_FLOAT32 
-                             :GGUF_METADATA_VALUE_TYPE_BOOL GGUF_METADATA_VALUE_TYPE_BOOL 
-                             :GGUF_METADATA_VALUE_TYPE_STRING GGUF_METADATA_VALUE_TYPE_STRING
-                             :GGUF_METADATA_VALUE_TYPE_ARRAY GGUF_METADATA_VALUE_TYPE_ARRAY 
-                             :GGUF_METADATA_VALUE_TYPE_UINT64 GGUF_METADATA_VALUE_TYPE_UINT64 
-                             :GGUF_METADATA_VALUE_TYPE_INT64 GGUF_METADATA_VALUE_TYPE_INT64 
-                             :GGUF_METADATA_VALUE_TYPE_FLOAT64 GGUF_METADATA_VALUE_TYPE_FLOAT64} :type)))
+                     :value gguf_metadata_value ))
 
 
-(defcodec gguf-header (gcore/ordered-map :gguf (string :ascii :length 4)  
-                                         :version :int32-le
-                                         :tensor_count :uint64-le))
 (def metadata 
  (repeated metadata_pair :prefix :uint64-le))
 
+(defcodec ggml-type
+  (enum :uint32-le
+    {:GGML_TYPE_F32  0
+     :GGML_TYPE_F16  1
+     :GGML_TYPE_Q4_0 2
+     :GGML_TYPE_Q4_1 3 }))
+
+(defcodec tensor-info-codec
+  (gcore/ordered-map
+    :name gguf_string
+    :n-dimensions :uint32-le
+    :dimensions (header :n-dimensions
+                        (fn [m] (:n-dimensions m))
+                        (fn [count] (repeated :uint64-le count)))
+    :type ggml-type
+    :offset :uint64-le))
+
+(defcodec gguf-file
+  (gcore/ordered-map
+    :magic (string :ascii :length 4)
+    :version :int32-le
+    :tensor-count :uint64-le
+    :metadata (repeated metadata_pair :prefix :uint64-le)))
 
 (defn parse 
-  ([x]
-   (if-let [resource (io/resource x)]
-     (let [buf (slurp-bytes resource)]
-         (let [header (gio/decode gguf-header buf false)]
-           (.position buf 16)
-           (gio/decode metadata buf false)))
-     (println "Resource not found:" x)))
+  ([x] (if-let [resource (io/resource x)]
+         (let [buf (slurp-bytes resource)]
+           (do (gio/decode gguf-file buf false) (println (.position buf)) ))
+           
+         (println "Resource not found:" x)))
   ([] (parse "example.gguf")))
 
