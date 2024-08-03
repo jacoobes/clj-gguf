@@ -1,9 +1,12 @@
 # cljgguf
 
-FIXME: my new library.
+clojure metadata parser for [gguf files](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
 
 ## Usage
 
+```
+
+```
 FIXME: write usage documentation!
 
 Invoke a library API function from the command-line:

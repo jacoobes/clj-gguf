@@ -1,68 +1,69 @@
 (ns jacoobes.cljgguf
-  (:require [[gloss.io :as gi]])
+  (:require [gloss.io :as gi])
   (:require [gloss.core :as g :refer [compile-frame string prefix
                                       finite-frame repeated enum 
                                       defcodec header ]])
   (:require [clojure.java.io :as io]))
 
+
 (defn- slurp-bytes
   "Slurp the bytes from a slurpable thing"
   [x]
-  (with-open [out (java.io.ByteArrayOutputStream.)]
-    (clojure.java.io/copy (clojure.java.io/input-stream x) out)
-    (gi/to-byte-buffer (.toByteArray out))))
-
+  (with-open [buf (io/input-stream x)]
+    (println buf)
+    (gi/to-byte-buffer buf)))
 
 (defcodec gguf_string 
   (finite-frame :uint64-le (string :utf-8)))
 
-(defcodec gguf_metadata_t (enum :uint32-le {:GGUF_METADATA_VALUE_TYPE_UINT8 0
-                                            :GGUF_METADATA_VALUE_TYPE_INT8 1
-                                            :GGUF_METADATA_VALUE_TYPE_UINT16 2
-                                            :GGUF_METADATA_VALUE_TYPE_INT16 3
-                                            :GGUF_METADATA_VALUE_TYPE_UINT32 4
-                                            :GGUF_METADATA_VALUE_TYPE_INT32 5
-                                            :GGUF_METADATA_VALUE_TYPE_FLOAT32 6
-                                            :GGUF_METADATA_VALUE_TYPE_BOOL 7
-                                            :GGUF_METADATA_VALUE_TYPE_STRING 8
-                                            :GGUF_METADATA_VALUE_TYPE_ARRAY 9
-                                            :GGUF_METADATA_VALUE_TYPE_UINT64 10
-                                            :GGUF_METADATA_VALUE_TYPE_INT64 11
-                                            :GGUF_METADATA_VALUE_TYPE_FLOAT64 12 }))
+(defcodec gguf_metadata_t (enum :uint32-le {:gguf_type_uint8 0
+                                            :gguf_type_int8 1
+                                            :gguf_type_uint16 2
+                                            :gguf_type_int16 3
+                                            :gguf_type_uint32 4
+                                            :gguf_type_int32 5
+                                            :gguf_type_float32 6
+                                            :gguf_type_bool 7
+                                            :gguf_type_string 8
+                                            :gguf_type_array 9
+                                            :gguf_type_uint64 10
+                                            :gguf_type_int64 11
+                                            :gguf_type_float64 12 }))
 
 
-(defcodec GGUF_METADATA_VALUE_TYPE_UINT8 {:type :GGUF_METADATA_VALUE_TYPE_UINT8 :val :ubyte })
-(defcodec GGUF_METADATA_VALUE_TYPE_INT8 {:type :GGUF_METADATA_VALUE_TYPE_INT8 :val :byte })
-(defcodec GGUF_METADATA_VALUE_TYPE_UINT16 {:type :GGUF_METADATA_VALUE_TYPE_UINT16 :val :uint16-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_INT16 {:type :GGUF_METADATA_VALUE_TYPE_INT16 :val :int16-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_UINT32 {:type :GGUF_METADATA_VALUE_TYPE_UINT32 :val :uint32-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_INT32 {:type :GGUF_METADATA_VALUE_TYPE_INT32 :val :int32-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_FLOAT32 {:type :GGUF_METADATA_VALUE_TYPE_FLOAT32 :val :float32-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_BOOL {:type :GGUF_METADATA_VALUE_TYPE_BOOL :val :byte })
-(defcodec GGUF_METADATA_VALUE_TYPE_STRING {:type :GGUF_METADATA_VALUE_TYPE_STRING :val gguf_string })
-(defcodec GGUF_METADATA_VALUE_TYPE_UINT64 {:type :GGUF_METADATA_VALUE_TYPE_UINT64 :val :uint64-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_INT64 {:type :GGUF_METADATA_VALUE_TYPE_INT64 :val :int64-le })
-(defcodec GGUF_METADATA_VALUE_TYPE_FLOAT64 {:type :GGUF_METADATA_VALUE_TYPE_FLOAT64 :val :float64-le })
+(defcodec gguf_type_uint8 {:type :gguf_type_uint8 :val :ubyte })
+(defcodec gguf_type_int8 {:type :gguf_type_int8 :val :byte })
+(defcodec gguf_type_bool {:type :gguf_type_bool :val :byte })
+(defcodec gguf_type_string {:type :gguf_type_string :val gguf_string })
 
-(def GGUF_METADATA_VALUE_TYPE_ARRAY)
-(def gguf-ty->code {:GGUF_METADATA_VALUE_TYPE_UINT8 GGUF_METADATA_VALUE_TYPE_UINT8 
-                    :GGUF_METADATA_VALUE_TYPE_INT8 GGUF_METADATA_VALUE_TYPE_INT8 
-                    :GGUF_METADATA_VALUE_TYPE_UINT16 GGUF_METADATA_VALUE_TYPE_UINT16 
-                    :GGUF_METADATA_VALUE_TYPE_INT16 GGUF_METADATA_VALUE_TYPE_INT16 
-                    :GGUF_METADATA_VALUE_TYPE_UINT32 GGUF_METADATA_VALUE_TYPE_UINT32 
-                    :GGUF_METADATA_VALUE_TYPE_INT32 GGUF_METADATA_VALUE_TYPE_INT32 
-                    :GGUF_METADATA_VALUE_TYPE_FLOAT32 GGUF_METADATA_VALUE_TYPE_FLOAT32 
-                    :GGUF_METADATA_VALUE_TYPE_BOOL GGUF_METADATA_VALUE_TYPE_BOOL 
-                    :GGUF_METADATA_VALUE_TYPE_STRING GGUF_METADATA_VALUE_TYPE_STRING
-                    :GGUF_METADATA_VALUE_TYPE_UINT64 GGUF_METADATA_VALUE_TYPE_UINT64 
-                    :GGUF_METADATA_VALUE_TYPE_INT64 GGUF_METADATA_VALUE_TYPE_INT64 
-                    :GGUF_METADATA_VALUE_TYPE_FLOAT64 GGUF_METADATA_VALUE_TYPE_FLOAT64
-                    :GGUF_METADATA_VALUE_TYPE_ARRAY GGUF_METADATA_VALUE_TYPE_ARRAY})
+(defcodec gguf_type_uint16  {:type :gguf_type_uint16 :val :uint16-le })
+(defcodec gguf_type_int16   {:type :gguf_type_int16 :val :int16-le   })
+(defcodec gguf_type_uint32  {:type :gguf_type_uint32 :val :uint32-le })
+(defcodec gguf_type_int32   {:type :gguf_type_int32 :val :int32-le   })
+(defcodec gguf_type_float32 {:type :gguf_type_float32 :val :float32-le })
+(defcodec gguf_type_uint64  {:type :gguf_type_uint64 :val :uint64-le })
+(defcodec gguf_type_int64   {:type :gguf_type_int64 :val :int64-le })
+(defcodec gguf_type_float64 {:type :gguf_type_float64 :val :float64-le })
+
+(def gguf_type_array)
+(def gguf-ty->code {:gguf_type_uint8 gguf_type_uint8 
+                    :gguf_type_int8 gguf_type_int8 
+                    :gguf_type_uint16 gguf_type_uint16 
+                    :gguf_type_int16 gguf_type_int16 
+                    :gguf_type_uint32 gguf_type_uint32 
+                    :gguf_type_int32 gguf_type_int32 
+                    :gguf_type_float32 gguf_type_float32 
+                    :gguf_type_bool gguf_type_bool 
+                    :gguf_type_string gguf_type_string
+                    :gguf_type_uint64 gguf_type_uint64 
+                    :gguf_type_int64 gguf_type_int64 
+                    :gguf_type_float64 gguf_type_float64
+                    :gguf_type_array gguf_type_array})
 
 (defcodec gguf_metadata_value (header gguf_metadata_t gguf-ty->code :type))
 
-(def GGUF_METADATA_VALUE_TYPE_ARRAY 
-  (g/compile-frame {:type :GGUF_METADATA_VALUE_TYPE_ARRAY 
+(def gguf_type_array 
+  (g/compile-frame {:type :gguf_type_array 
                     :val (header [gguf_metadata_t :uint64-le] 
                                  (fn [[ty len]]
                                     (g/compile-frame (repeat len (gguf-ty->code ty))))
@@ -74,10 +75,10 @@
 
 (defcodec ggml-type
   (enum :uint32-le
-    {:GGML_TYPE_F32      0 :GGML_TYPE_F16        1
-     :GGML_TYPE_Q4_0     2 :GGML_TYPE_Q4_1       3 
-     :GGML_TYPE_Q5_0     6, :GGML_TYPE_Q5_1      7,
-     :GGML_TYPE_Q8_0     8, :GGML_TYPE_Q8_1      9,
+    {:GGML_TYPE_F32      0   :GGML_TYPE_F16        1
+     :GGML_TYPE_Q4_0     2   :GGML_TYPE_Q4_1       3 
+     :GGML_TYPE_Q5_0     6,  :GGML_TYPE_Q5_1      7,
+     :GGML_TYPE_Q8_0     8,  :GGML_TYPE_Q8_1      9,
      :GGML_TYPE_Q2_K     10, :GGML_TYPE_Q3_K     11,
      :GGML_TYPE_Q4_K     12, :GGML_TYPE_Q5_K     13,
      :GGML_TYPE_Q6_K     14, :GGML_TYPE_Q8_K     15,
@@ -119,14 +120,21 @@
                          :tensor-ct  (count (body :tensor-info))
                          :metadata-ct (count (body :metadata)) })))
 
-(defn parse 
-  ([x] (if-let [resource (io/resource x)]
-         (let [buf (slurp-bytes resource)
-              decoded (gi/decode gguf-file buf false) ]
-            decoded)
-         (println "Resource not found:" x)))
-  ([] (parse "example.gguf")))
+(defn decode [src] 
+  "Decodes a gguf file metadata into a clojure map. 
+   Accepts remote resources, urls. relative paths (your resources path)
+   Example:
+   (decode \"example.gguf\") ; decode from resources
+
+   (decode \"~/.cache/gpt4all/nomic-embed-text-v1.5.f16.gguf\")"
+  (if-let [resource (io/resource src)]
+     (let [buf (slurp-bytes resource)]
+        (gi/decode gguf-file buf false))
+     (let [buf (slurp-bytes (io/file src))]
+        (gi/decode gguf-file false))))
+
+(defn encode [file-data]
+  (gi/encode gguf-file file-data))
 
 
-(defn encode [file]
-  (gi/encode gguf-file file))
+
