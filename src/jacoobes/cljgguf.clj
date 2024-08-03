@@ -8,11 +8,11 @@
   (:require [clojure.java.io :as io]))
 
 
-(defn- slurp-bytes
+(defn slurp-bytes
   "Slurp the bytes from a slurpable thing"
   [x]
-  (take 7000 (bs/convert (io/input-stream x)
-              (bs/seq-of java.nio.ByteBuffer))))
+  (bs/convert (io/input-stream x)
+              (bs/seq-of java.nio.ByteBuffer)))
 
 
 (defcodec gguf_string 
