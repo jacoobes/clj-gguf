@@ -10,8 +10,8 @@
   "Slurp the bytes from a slurpable thing"
   [x]
   (with-open [buf (io/input-stream x)]
-    (println buf)
-    (gi/to-byte-buffer buf)))
+    (gi/to-buf-seq buf)))
+
 
 (defcodec gguf_string 
   (finite-frame :uint64-le (string :utf-8)))
@@ -130,8 +130,8 @@
   (if-let [resource (io/resource src)]
      (let [buf (slurp-bytes resource)]
         (gi/decode gguf-file buf false))
-     (let [buf (slurp-bytes (io/file src))]
-        (gi/decode gguf-file false))))
+     (let [buf (slurp-bytes src)]
+        (gi/decode gguf-file buf false))))
 
 (defn encode [file-data]
   (gi/encode gguf-file file-data))
