@@ -1,6 +1,7 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
-        org.clj-commons/gloss {:mvn/version "0.3.6"}}
+        org.clj-commons/gloss {:mvn/version "0.3.6"}
+        org.clj-commons/byte-streams {:mvn/version "0.3.4"}}
  :aliases
  {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.4"}
                  slipset/deps-deploy {:mvn/version "0.2.1"}}

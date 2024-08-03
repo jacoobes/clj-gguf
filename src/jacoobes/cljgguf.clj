@@ -1,16 +1,18 @@
 (ns jacoobes.cljgguf
+  (:require [byte-streams :as bs])
   (:require [gloss.io :as gi])
+
   (:require [gloss.core :as g :refer [compile-frame string prefix
                                       finite-frame repeated enum 
-                                      defcodec header ]])
+                                      defcodec header]])
   (:require [clojure.java.io :as io]))
 
 
 (defn- slurp-bytes
   "Slurp the bytes from a slurpable thing"
   [x]
-  (with-open [buf (io/input-stream x)]
-    (gi/to-buf-seq buf)))
+  (take 7000 (bs/convert (io/input-stream x)
+              (bs/seq-of java.nio.ByteBuffer))))
 
 
 (defcodec gguf_string 
@@ -135,6 +137,3 @@
 
 (defn encode [file-data]
   (gi/encode gguf-file file-data))
-
-
-
