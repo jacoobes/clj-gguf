@@ -1,11 +1,11 @@
 (ns jacoobes.cljgguf
-  (:require [gloss.io :as gi])
+  (:require [[gloss.io :as gi]])
   (:require [gloss.core :as g :refer [compile-frame string prefix
                                       finite-frame repeated enum 
                                       defcodec header ]])
   (:require [clojure.java.io :as io]))
 
-(defn slurp-bytes
+(defn- slurp-bytes
   "Slurp the bytes from a slurpable thing"
   [x]
   (with-open [out (java.io.ByteArrayOutputStream.)]
@@ -13,7 +13,9 @@
     (gi/to-byte-buffer (.toByteArray out))))
 
 
-(defcodec gguf_string (finite-frame :uint64-le (string :utf-8)))
+(defcodec gguf_string 
+  (finite-frame :uint64-le (string :utf-8)))
+
 (defcodec gguf_metadata_t (enum :uint32-le {:GGUF_METADATA_VALUE_TYPE_UINT8 0
                                             :GGUF_METADATA_VALUE_TYPE_INT8 1
                                             :GGUF_METADATA_VALUE_TYPE_UINT16 2
@@ -64,15 +66,11 @@
                     :val (header [gguf_metadata_t :uint64-le] 
                                  (fn [[ty len]]
                                     (g/compile-frame (repeat len (gguf-ty->code ty))))
-                                 (fn [body] 
-                                   )) 
-                    
-                    }))
+                                 (fn [body] [(->> body first :type) (count body)] )) }))
 
 (defcodec metadatap 
   (g/ordered-map :key gguf_string  
                  :value gguf_metadata_value))
-
 
 (defcodec ggml-type
   (enum :uint32-le
@@ -116,7 +114,10 @@
 (defcodec gguf-file
   (g/header gguf-header 
             (fn [header] (g/compile-frame (gguf-map header) ))
-            (fn [body] body )))
+            (fn [body] { :magic (body :magic)
+                         :version (body :version)
+                         :tensor-ct  (count (body :tensor-info))
+                         :metadata-ct (count (body :metadata)) })))
 
 (defn parse 
   ([x] (if-let [resource (io/resource x)]
@@ -126,3 +127,6 @@
          (println "Resource not found:" x)))
   ([] (parse "example.gguf")))
 
+
+(defn encode [file]
+  (gi/encode gguf-file file))
