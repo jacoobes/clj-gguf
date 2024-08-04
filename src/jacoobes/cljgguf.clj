@@ -7,23 +7,12 @@
                                       defcodec header]])
   (:require [clojure.java.io :as io]))
 
-(defn- read-or-nil [stream]
-  (let [buf (byte-array 4096)]
-    (when-not (= -1 (.read stream buf))
-      buf)))
 
-(defn byte-chunk-seq [stream]
-  (lazy-seq (if-let [buf (read-or-nil stream)]
-              (cons buf (byte-chunk-seq stream))
-              nil)))
 
-(defn slurp-bytes
+(defn- slurp-bytes
   "Slurp the bytes from a slurpable thing"
   [x]
-  (let [ _  (println "about to load") 
-         buf (gi/to-buf-seq (io/input-stream x))
-         __ (println "loaded") ] 
-    buf))
+  (bs/convert x (bs/seq-of java.nio.ByteBuffer)))
 
 
 (defcodec gguf_string 
@@ -58,7 +47,7 @@
 (defcodec gguf_type_int64   {:type :gguf_type_int64 :val :int64-le })
 (defcodec gguf_type_float64 {:type :gguf_type_float64 :val :float64-le })
 
-(def gguf_type_array)
+(declare gguf_type_array)
 (def gguf-ty->code {:gguf_type_uint8 gguf_type_uint8 
                     :gguf_type_int8 gguf_type_int8 
                     :gguf_type_uint16 gguf_type_uint16 
@@ -83,7 +72,7 @@
                                  (fn [body] [(->> body first :type) (count body)] )) }))
 
 (defcodec metadatap 
-  (g/ordered-map :key gguf_string  
+  (g/ordered-map :key   gguf_string  
                  :value gguf_metadata_value))
 
 (defcodec ggml-type
@@ -122,16 +111,17 @@
   (g/ordered-map 
     :magic (:magic head)
     :version (:version head)
-    :metadata (repeat (:metadata-ct head) metadatap)
-    :tensor-info (repeat (:tensor-ct head) tensor-info-codec)))
+    :metadata (do (println "parsing metadata") (repeat (:metadata-ct head) metadatap)) 
+    :tensor-info (do (println "parsing tensor info ") (repeat (:tensor-ct head) tensor-info-codec)) ))
 
 (defcodec gguf-file
   (g/header gguf-header 
-            (fn [header] (g/compile-frame (gguf-map header) ))
+            (fn [header] (println header) (g/compile-frame (gguf-map header) ))
             (fn [body] { :magic (body :magic)
                          :version (body :version)
                          :tensor-ct  (count (body :tensor-info))
                          :metadata-ct (count (body :metadata)) })))
+
 (def testurl "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-GGUF/resolve/main/Meta-Llama-3-8B.Q2_K.gguf?download=true")
 
 (defn decode [src] 
@@ -142,12 +132,10 @@
 
    (decode \"~/.cache/gpt4all/nomic-embed-text-v1.5.f16.gguf\")"
   (with-open [resource (io/input-stream src)]
-    (let [_ (println "about to load")
-          se (byte-chunk-seq resource)
-          __ (println "done") ] 
-     (gi/decode gguf-file se false) 
-      )
-    ))
+    (let [ _ (println "about to load")
+          bytes (slurp-bytes resource)
+           _ (println "done") ] 
+     (gi/decode gguf-file bytes ))))
 
 (defn encode [file-data]
   (gi/encode gguf-file file-data))
