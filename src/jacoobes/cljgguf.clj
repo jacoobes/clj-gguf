@@ -7,12 +7,23 @@
                                       defcodec header]])
   (:require [clojure.java.io :as io]))
 
+(defn- read-or-nil [stream]
+  (let [buf (byte-array 4096)]
+    (when-not (= -1 (.read stream buf))
+      buf)))
+
+(defn byte-chunk-seq [stream]
+  (lazy-seq (if-let [buf (read-or-nil stream)]
+              (cons buf (byte-chunk-seq stream))
+              nil)))
 
 (defn slurp-bytes
   "Slurp the bytes from a slurpable thing"
   [x]
-  (bs/convert (io/input-stream x)
-              (bs/seq-of java.nio.ByteBuffer)))
+  (let [ _  (println "about to load") 
+         buf (gi/to-buf-seq (io/input-stream x))
+         __ (println "loaded") ] 
+    buf))
 
 
 (defcodec gguf_string 
@@ -121,6 +132,7 @@
                          :version (body :version)
                          :tensor-ct  (count (body :tensor-info))
                          :metadata-ct (count (body :metadata)) })))
+(def testurl "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-GGUF/resolve/main/Meta-Llama-3-8B.Q2_K.gguf?download=true")
 
 (defn decode [src] 
   "Decodes a gguf file metadata into a clojure map. 
@@ -129,11 +141,13 @@
    (decode \"example.gguf\") ; decode from resources
 
    (decode \"~/.cache/gpt4all/nomic-embed-text-v1.5.f16.gguf\")"
-  (if-let [resource (io/resource src)]
-     (let [buf (slurp-bytes resource)]
-        (gi/decode gguf-file buf false))
-     (let [buf (slurp-bytes src)]
-        (gi/decode gguf-file buf false))))
+  (with-open [resource (io/input-stream src)]
+    (let [_ (println "about to load")
+          se (byte-chunk-seq resource)
+          __ (println "done") ] 
+     (gi/decode gguf-file se false) 
+      )
+    ))
 
 (defn encode [file-data]
   (gi/encode gguf-file file-data))
