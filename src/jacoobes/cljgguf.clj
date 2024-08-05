@@ -1,5 +1,5 @@
 (ns jacoobes.cljgguf
-  (:require [byte-streams :as bs])
+  (:require [clj-commons.byte-streams :as bs])
   (:require [gloss.io :as gi])
 
   (:require [gloss.core :as g :refer [compile-frame string prefix
@@ -7,13 +7,13 @@
                                       defcodec header]])
   (:require [clojure.java.io :as io]))
 
+(declare gguf_type_array)
 
 
 (defn- slurp-bytes
   "Slurp the bytes from a slurpable thing"
   [x]
-  (bs/convert x (bs/seq-of java.nio.ByteBuffer)))
-
+  (bs/convert x (bs/seq-of java.nio.ByteBuffer) {:chunk-size 100 }))
 
 (defcodec gguf_string 
   (finite-frame :uint64-le (string :utf-8)))
@@ -47,7 +47,6 @@
 (defcodec gguf_type_int64   {:type :gguf_type_int64 :val :int64-le })
 (defcodec gguf_type_float64 {:type :gguf_type_float64 :val :float64-le })
 
-(declare gguf_type_array)
 (def gguf-ty->code {:gguf_type_uint8 gguf_type_uint8 
                     :gguf_type_int8 gguf_type_int8 
                     :gguf_type_uint16 gguf_type_uint16 
@@ -68,12 +67,12 @@
   (g/compile-frame {:type :gguf_type_array 
                     :val (header [gguf_metadata_t :uint64-le] 
                                  (fn [[ty len]]
+                                   (println ty len)
                                     (g/compile-frame (repeat len (gguf-ty->code ty))))
                                  (fn [body] [(->> body first :type) (count body)] )) }))
 
-(defcodec metadatap 
-  (g/ordered-map :key   gguf_string  
-                 :value gguf_metadata_value))
+(defcodec metadatap (g/ordered-map :key   gguf_string  
+                                   :value gguf_metadata_value))
 
 (defcodec ggml-type
   (enum :uint32-le
@@ -112,7 +111,8 @@
     :magic (:magic head)
     :version (:version head)
     :metadata (do (println "parsing metadata") (repeat (:metadata-ct head) metadatap)) 
-    :tensor-info (do (println "parsing tensor info ") (repeat (:tensor-ct head) tensor-info-codec)) ))
+    ;:tensor-info (do (println "parsing tensor info ") (repeat (:tensor-ct head) tensor-info-codec)) 
+    ))
 
 (defcodec gguf-file
   (g/header gguf-header 
@@ -122,7 +122,12 @@
                          :tensor-ct  (count (body :tensor-info))
                          :metadata-ct (count (body :metadata)) })))
 
-(def testurl "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-GGUF/resolve/main/Meta-Llama-3-8B.Q2_K.gguf?download=true")
+(defn slurp-bytes2
+  "Slurp the bytes from a slurpable thing"
+  [x]
+  (with-open [out (java.io.ByteArrayOutputStream.)]
+    (clojure.java.io/copy (clojure.java.io/input-stream x) out)
+    (gi/to-byte-buffer (.toByteArray out))))
 
 (defn decode [src] 
   "Decodes a gguf file metadata into a clojure map. 
@@ -133,9 +138,24 @@
    (decode \"~/.cache/gpt4all/nomic-embed-text-v1.5.f16.gguf\")"
   (with-open [resource (io/input-stream src)]
     (let [ _ (println "about to load")
-          bytes (slurp-bytes resource)
-           _ (println "done") ] 
-     (gi/decode gguf-file bytes ))))
+          bytes (slurp-bytes2 resource)
+           _ (println "done")] 
+     (gi/decode gguf-file bytes false))))
 
 (defn encode [file-data]
   (gi/encode gguf-file file-data))
+
+
+(def testurl "https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF/resolve/191239b/llama-2-7b-chat.Q2_K.gguf")
+
+(defn parse-header [stream]
+  (let [barr (byte-array 24)
+        _ (if (neg? (.read stream barr)) (throw "End of input-stream. Ensure your gguf file is correct.")) 
+        headermap (gi/decode gguf-header barr false)]
+    headermap))
+(do 
+ (println "about to load") 
+  (with-open [is (io/input-stream testurl) ]
+    (parse-header is)
+    
+    ))
